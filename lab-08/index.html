@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset=utf-8 />
+  <title>Lab 8: Denver home location exercise</title>
+  <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+  <!-- Is the is the latest version of Leaflet? -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" />
+  <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700" rel="stylesheet">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: rgb(43, 43, 43);
+      font-family: "Lato", sans-serif;
+      font-size: 100%;
+      font-weight: 300;
+      color: rgb(172, 172, 172);
+    }
+
+    header,
+    footer,
+    section {
+      padding: 6px 10%;
+      margin: 0 auto;
+      width: 80%
+    }
+
+    h1 {
+      display: inline-block;
+      margin-right: 20px;
+      color: rgb(190, 190, 190);
+      font-size: 3.5em;
+      font-weight: 700;
+    }
+
+    h2 {
+      display: inline-block;
+      color: rgba(255, 200, 0, 0.8);
+      letter-spacing: 0.05em;
+      margin-top: 0px;
+      font-weight: 300;
+      text-transform: uppercase;
+      border-bottom: 1px dotted rgba(255, 200, 0, 0.5);
+      ;
+    }
+
+    #map {
+      width: 80%;
+      height: 540px;
+      margin: 10px auto;
+    }
+
+    p {
+      font-size: 1em;
+      color: rgba(170, 170, 170);
+      ;
+      font-weight: 300;
+      font-size: 1.2em;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Amenities in Denver</h1>
+    <h2>Fire Stations, Grocery Stores, and Afterschool Programs</h2>
+  </header>
+
+  <div id='map'></div>
+
+  <footer>
+    <p>Map authored by Greg Campbell-Cohen</p>
+    <p>I have made a mess of the layers here, which did not seem to be a debilitating problem until I got to the end.</p>
+  </footer>
+  <!-- Is the is the latest version of Leaflet? -->
+  <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
+  <script src="data/denver-fire-stations.js"></script>
+  <script src="data/denver-food-stores.js"></script>
+  <script src="data/after-school-programs.js"></script>
+  <script>
+    var map = L.map('map', {
+      center: [39.7256, -104.9252],
+      zoom: 11,
+    });
+
+    var tiles = L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/rastertiles/dark_all/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="http://cartodb.com/attributions">CartoDB</a>',
+      subdomains: 'abcd',
+      maxZoom: 19
+    }).addTo(map);
+
+    var tiles = L.tileLayer('http://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="http://cartodb.com/attributions">CartoDB</a>',
+      subdomains: 'abcd',
+      maxZoom: 19
+    });
+
+    var commonStyles = {
+    weight: 1,
+    radius: 5,
+    fillOpacity: 1
+    };
+
+    var programsLayer = L.geoJson(programs, {
+    pointToLayer: function (feature, latlng) {
+        return L.circleMarker(latlng, commonStyles);
+    },
+    style: function (feature) {
+        return {
+            color: '#003366',
+            fillColor: '#003366'
+        }
+    },
+    onEachFeature: function (feature, layer) {
+			layer.on("mouseover", function () {
+			  layer.setStyle({
+				fillColor: "orange",
+			  });
+			});
+			layer.on("mouseout", function () {
+			  layer.setStyle({
+				fillColor: "#834C24",
+			  });
+			});
+			layer.bindPopup(
+			  "<b><big><big>" +
+				layer.feature.properties.ORGANIZATI +
+				"</b></big>"
+			);
+		  },
+		}).addTo(map);
+
+   var stationsLayer = L.geoJson(stations, {
+    pointToLayer: function (feature, latlng) {
+        return L.circleMarker(latlng, commonStyles);
+    },
+    style: function (feature) {
+        return {
+            color: '#FFF8DC',
+            fillColor: '#FFF8DC'
+        }
+    },
+    onEachFeature: function (feature, layer) {
+			layer.on("mouseover", function () {
+			  layer.setStyle({
+				fillColor: "orange",
+			  });
+			});
+			layer.on("mouseout", function () {
+			  layer.setStyle({
+				fillColor: "#FFF8DC",
+			  });
+			});
+			layer.bindPopup(
+			  "<b><big><big>" +
+				layer.feature.properties.STATION_NU +
+				"</b></big>"
+			);
+		  },
+		}).addTo(map);
+
+  var storesLayer = L.geoJson(stores, {
+    pointToLayer: function (feature, latlng) {
+        return L.circleMarker(latlng, commonStyles);
+    },
+    style: function (feature) {
+        return {
+            color: '#834C24',
+            fillColor: '#834C24'
+
+        }
+    },
+    onEachFeature: function (feature, layer) {
+			layer.on("mouseover", function () {
+			  layer.setStyle({
+				fillColor: "orange",
+			  });
+			});
+			layer.on("mouseout", function () {
+			  layer.setStyle({
+				fillColor: "#834C24",
+			  });
+			});
+			layer.bindPopup(
+			  "<b><big><big>" +
+				layer.feature.properties.STORE_NAME +
+				"</b></big>"
+			);
+		  },
+		}).addTo(map);
+
+    var geoJsonLayers = {};
+
+    var sourcesLabels = {
+    "Programs": programsLayer,
+    "Stations": stationsLayer,
+    "Stores": storesLayer
+    }
+    
+
+    L.control.layers(null, sourcesLabels, {
+    collapsed: false
+    }).addTo(map);
+
+    var layerInfo = {
+    programsLayer: {
+        source: "Programs",
+        color: '#003366'
+    },
+    stationsLayer: {
+        source: "Stations",
+        color: '#FFF8DC'
+    },
+    storesLayer: {
+        source: "Stores",
+        color: '#834C24'
+    }
+};
+
+    map.on('click', function (e) {
+    for (var gsLayer in layerInfo) {
+        geoJsonLayers.eachLayer(function (layer) {
+            var distance = e.latlng.distanceTo(layer.getLatLng()) / 1000;
+            if (distance > 1) {
+                layer.setStyle({
+                    stroke: false,
+                    fill: false
+                });
+            } else {
+                layer.setStyle({
+                    stroke: true,
+                    fill: true,
+                    fillOpacity: .2
+                });
+              }
+        });
+    }});
+
+  </script>
+
+</body>
+</html>

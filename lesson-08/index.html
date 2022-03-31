@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset=utf-8 />
+  <title>Lesson 08: US Power Plants</title>
+  <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700" rel="stylesheet">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: rgb(42, 42, 42);
+      font-family: "Lato", sans-serif;
+      font-size: 100%;
+      font-weight: 300;
+      color: rgb(172, 172, 172);
+    }
+
+    header,
+    footer,
+    section {
+      padding: 6px 10%;
+      margin: 0 auto;
+      width: 80%
+    }
+
+    h1 {
+      display: inline-block;
+      margin-right: 20px;
+      color: rgb(190, 190, 190);
+      font-size: 3.5em;
+      font-weight: 700;
+    }
+
+    h2 {
+      display: inline-block;
+      color: #94d8ff;
+      letter-spacing: 0.05em;
+      margin-top: 0px;
+      font-weight: 300;
+      text-transform: uppercase;
+      /*  Stack text shadows.  */
+      text-shadow: 0 0 30px #0098b3, 0 0 40px #00c2e4, 0 0 50px #00c2e4, 0 0 80px #00c2e4;
+    }
+
+
+    #map {
+      width: 80%;
+      height: 540px;
+      margin: 10px auto;
+    }
+
+
+    p {
+      font-size: 1em;
+      color: rgba(170, 170, 170);
+      ;
+      font-weight: 300;
+      font-size: 1.2em;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>US Power Plants</h1>
+    <h2>sources of electricity</h2>
+  </header>
+
+  <div id='map'></div>
+
+  <footer>
+    <p>Map authored by Greg Campbell-Cohen</p>
+    <p>Additional information about the data and map goes here.</p>
+  </footer>
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script src="data/power-plants.js"></script>
+  <script>
+    var map = L.map('map', {
+      center: [36, -94],
+      zoom: 4,
+    });
+
+    var tiles = L.tileLayer('http://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="http://cartodb.com/attributions">CartoDB</a>',
+      subdomains: 'abcd',
+      maxZoom: 19
+    });
+
+    tiles.addTo(map);
+    
+    var layerInfo = {
+    hydroLayer: {
+        source: "Hydro",
+        color: '#1f78b4'
+    },
+    windLayer: {
+        source: "Wind",
+        color: '#a6cee3'
+    }
+};
+
+// Build empty JS object
+var geoJsonLayers = {};
+
+// Loop through first object
+for (var layer in layerInfo) {
+    // Populate the second object with all features that
+    geoJsonLayers[layer] = L.geoJson(plants, {
+        // we convert to a layer
+        pointToLayer: function (feature, latlng) {
+            return L.circleMarker(latlng, commonStyles);
+        },
+        // exist in our first object
+        filter: function (feature) {
+            if (feature.properties.fuel_source[layerInfo[layer].source]) {
+                return feature;
+            }
+        },
+        // and match the style given in first object and with getRadius()
+        style: function (feature) {
+            return {
+                color: layerInfo[layer].color,
+                fillColor: layerInfo[layer].color,
+                radius: getRadius(feature.properties.fuel_source[layerInfo[layer].source])
+            }
+        }
+    }).addTo(map);
+}
+
+function getRadius(val) {
+    var radius = Math.sqrt(val / Math.PI);
+    return radius * .8;
+}
+
+var sourcesLabels = {
+    "Hydro": geoJsonLayers.hydroLayer,
+    "Wind": geoJsonLayers.windLayer
+}
+
+L.control.layers(null, sourcesLabels, {
+    collapsed: false
+}).addTo(map);
+
+var commonStyles = {
+    weight: 1,
+    stroke: 1,
+    fillOpacity: .8
+}
+
+map.on('click', function (e) {
+    // Loop through object containing geojson layers
+    for (var gsLayer in layerInfo) {
+
+        // Add a function to each layer geoJsonLayers object
+        // Important! We need to make a distinction between
+        // gsLayer (a key in layerInfo that matches a key in geoJsonLayers) 
+        // and layer (a function parameter)
+
+        geoJsonLayers[gsLayer].eachLayer(function (layer) {
+
+            // Compare this output and understand how data are accessed
+            console.log(`layerInfo[gsLayer]: ${layerInfo[gsLayer].source} \n*******\n`)
+            console.log(`geoJsonLayers[gsLayer]: ${geoJsonLayers[gsLayer]} \n*******\n`)
+            console.log(`gsLayer: ${gsLayer} \n*******\n`)
+            console.log(`layer: ${layer} \n*******\n`)
+
+            var distance = e.latlng.distanceTo(layer.getLatLng()) / 1000;
+
+            if (distance > 500) {
+                layer.setStyle({
+                    stroke: false,
+                    fill: false
+                });
+            } else {
+                layer.setStyle({
+                    stroke: true,
+                    fill: true
+                });
+
+
+                // Create tooltip!
+                // First get the properties of the for each geojson feature
+                var props = layer.feature.properties;
+
+                var content = `<h3>${props.plant_name}</h3>`;
+
+                // Some plants have more than one fuel source
+                // Find the most dominate and add it to the popup
+                var compare = 0
+                var dominate = ''
+                for (var type in props.fuel_source) {
+                    content += `${type}: 
+                                ${props.fuel_source[type].toLocaleString()} MW <br>`;
+                    if (props.fuel_source[type] > compare) {
+                        compare = props.fuel_source[type]
+                        dominate = type
+                    }
+                }
+                
+                content += `A <span style='color:${layerInfo[gsLayer].color}'>
+                           ${layerInfo[gsLayer].source}</span> facility <b> 
+                           ${distance.toLocaleString()} km</b><br> 
+                           from the click point.<br>
+                           Primarily a ${dominate} plant.`
+
+
+                layer.bindTooltip(content);
+            }
+        });
+    }
+});
+
+</script>
+
+</body>
+</html>
